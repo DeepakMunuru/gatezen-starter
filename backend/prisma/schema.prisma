@@ -4,6 +4,9 @@
 // Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
 // Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
 
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
 generator client {
   provider = "prisma-client-js"
 }
@@ -14,8 +17,113 @@ datasource db {
 }
 
 model User {
+  id       String    @id @default(uuid())
+  name     String
+  email    String    @unique
+  password String
+  tickets  Ticket[]  // A user can create many maintenance tickets
+  comments Comment[] // A user can add many comments
+  bookings Booking[] 
+  rsvp RSVP[]
+}
+
+model Ticket {
+  id          String      @id @default(uuid())
+  title       String
+  category    String
+  description String?
+  status      TicketStatus @default(SUBMITTED)
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  userId      String
+  user        User         @relation(fields: [userId], references: [id])
+  comments    Comment[]
+  images      Image[]
+  history     History[]
+}
+
+model Comment {
+  id        String   @id @default(uuid())
+  text      String
+  createdAt DateTime @default(now())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  ticketId  String
+  ticket    Ticket   @relation(fields: [ticketId], references: [id])
+}
+
+model Image {
+  id        String   @id @default(uuid())
+  url       String
+  createdAt DateTime @default(now())
+  ticketId  String
+  ticket    Ticket   @relation(fields: [ticketId], references: [id])
+}
+
+model History {
+  id       String      @id @default(uuid())
+  status   TicketStatus
+  note     String?
+  at       DateTime     @default(now())
+  ticketId String
+  ticket   Ticket       @relation(fields: [ticketId], references: [id])
+}
+
+enum TicketStatus {
+  SUBMITTED
+  IN_PROGRESS
+  RESOLVED
+}
+
+
+// --- Facilities / Bookings / Events ---
+
+model Facility {
   id        String   @id @default(uuid())
   name      String
-  email     String   @unique
-  password  String
+  open      String   // "09:00"  (frontend reads facility.open)
+  close     String   // "21:00"  (frontend reads facility.close)
+  slotMins  Int      // 60       (frontend reads facility.slotMins)
+  bookings  Booking[]
+}
+
+model Booking {
+  id         String        @id @default(uuid())
+  startsAt   DateTime
+  endsAt     DateTime
+  note       String?
+  status     BookingStatus @default(CONFIRMED)
+
+  userId     String
+  user       User          @relation(fields: [userId], references: [id])
+
+  facilityId String
+  facility   Facility      @relation(fields: [facilityId], references: [id])
+
+  @@index([facilityId, startsAt])
+}
+
+enum BookingStatus {
+  CONFIRMED
+  CANCELLED
+}
+
+model Event {
+  id          String   @id @default(uuid())
+  title       String
+  description String?
+  location    String
+  startsAt    DateTime
+  endsAt      DateTime
+  rsvps       RSVP[]
+}
+
+model RSVP {
+  id      String @id @default(uuid())
+  userId  String
+  user    User   @relation(fields: [userId], references: [id])
+  eventId String
+  event   Event  @relation(fields: [eventId], references: [id])
+
+  @@unique([userId, eventId])
 }

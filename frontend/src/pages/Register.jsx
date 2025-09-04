@@ -12,6 +12,7 @@ import { Link, useNavigate } from "react-router-dom";
 import supabase from "../lib/supabase";
 import { isAuthed, setUser } from "../lib/auth";
 import GoogleSignin from "../components/GoogleSignin";
+import ReCAPTCHA from "react-google-recaptcha";   // ✅ import reCAPTCHA
 
 export default function Register() {
   const navigate = useNavigate();
@@ -22,6 +23,7 @@ export default function Register() {
   const [showPw, setShowPw] = useState(false);
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState("");
+  const [captcha, setCaptcha] = useState(null);         //change
 
   useEffect(() => {
     if (isAuthed()) navigate("/dashboard");
@@ -58,6 +60,7 @@ export default function Register() {
           name: name,
           email: email,
           password: password,
+          "g-recaptcha-response": captcha
         }
       );
 
@@ -69,8 +72,6 @@ export default function Register() {
       localStorage.setItem("token", res.data.jwttoken);
       if (res.data.user) setUser(res.data.user);
       navigate("/dashboard", { replace: true });
-      setUser(res.user);
-      navigate("/dashboard");
     } catch (e) {
       setErr(e?.message || "Registration failed");
     } finally {
@@ -137,6 +138,11 @@ export default function Register() {
               {showPw ? <FiEyeOff /> : <FiEye />}
             </button>
           </label>
+
+          <ReCAPTCHA
+            sitekey={import.meta.env.VITE_RECAPTCHA_SITE_KEY}
+            onChange={(token) => setCaptcha(token)}
+          />
 
           <button className="auth-btn" type="submit" disabled={loading}>
             {loading ? (
